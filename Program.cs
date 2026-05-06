@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Obtener connection string desde appsettings o variables de entorno (Render)
-var connectionString = builder.Configuration.GetConnectionString("ConnectionStrings") 
-    ?? Environment.GetEnvironmentVariable("Connection");
+var connectionString = builder.Configuration.GetConnectionString("Connection") 
+    ?? Environment.GetEnvironmentVariable("ConnectionStrings__Connection");
 
 // Configuración de DbContext con PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
