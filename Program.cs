@@ -3,12 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔹 Puerto dinámico (Render) → SIEMPRE antes de Build()
-var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-
-// 🔹 Connection string (appsettings o Render)
-var connectionString = builder.Configuration.GetConnectionString("Connection") 
+// 🔹 Obtener connection string (appsettings o Render)
+var connectionString = builder.Configuration.GetConnectionString("Connection")
     ?? Environment.GetEnvironmentVariable("ConnectionStrings__ConnectionSeguridadyAccesos");
 
 if (string.IsNullOrEmpty(connectionString))
@@ -16,7 +12,7 @@ if (string.IsNullOrEmpty(connectionString))
     throw new Exception("Connection string NO configurado");
 }
 
-// 🔹 DbContext (TU contexto real)
+// 🔹 DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -28,18 +24,36 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 🔹 Migraciones automáticas
+// 🔹 Puerto dinámico (Render)
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+app.Urls.Add($"http://0.0.0.0:{port}");
+
+// 🔹 Base de datos (elige UNA opción)
+
+// ✅ OPCIÓN SEGURA (PRODUCCIÓN)
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     context.Database.Migrate();
 }
 
-// 🔹 Middleware
+/*
+// ❌ OPCIÓN SOLO PRUEBAS (BORRA TODO)
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    context.Database.EnsureDeleted();   // 💣 BORRA TODO
+    context.Database.EnsureCreated();   // 🧱 CREA BIEN
+}
+*/
+
+// 🔹 Swagger SIEMPRE activo (Render no usa Development)
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// app.UseHttpsRedirection();
+// 🔹 Middleware
+// app.UseHttpsRedirection(); // Mejor desactivado en Render
 app.UseAuthorization();
 
 app.MapControllers();
