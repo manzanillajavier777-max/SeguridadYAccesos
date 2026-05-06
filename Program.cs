@@ -3,45 +3,44 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Obtener connection string desde appsettings o variables de entorno (Render)
+// Connection string: appsettings o variable de entorno (Render)
 var connectionString = builder.Configuration.GetConnectionString("Connection") 
     ?? Environment.GetEnvironmentVariable("ConnectionStrings__ConnectionSeguridadyAccesos");
 
+// Validación (opcional pero recomendable)
 if (string.IsNullOrEmpty(connectionString))
 {
     throw new Exception("Connection string NO configurado");
 }
-// Configuración de DbContext con PostgreSQL
+
+// DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Servicios básicos
+// Servicios
 builder.Services.AddHttpClient();
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// IMPORTANTE: configurar el puerto dinámico para Render
+var app = builder.Build();
+
+// Puerto dinámico (Render)
 var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-var app = builder.Build();
-
-// Ejecutar migraciones automáticamente al iniciar
+// Migraciones automáticas
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     context.Database.Migrate();
 }
 
-// Swagger siempre activo (Render no es "Development")
+// Middleware
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Render ya maneja HTTPS, mejor evitar esto si da problemas
 // app.UseHttpsRedirection();
-
 app.UseAuthorization();
 
 app.MapControllers();
