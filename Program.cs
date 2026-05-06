@@ -2,31 +2,44 @@ using Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Obtener connection string desde appsettings o variables de entorno (Render)
+var connectionString = builder.Configuration.GetConnectionString("Connection") 
+    ?? Environment.GetEnvironmentVariable("ConnectionStrings__ConnectionSeguridadyAccesos");
+
+// Configuración de DbContext con PostgreSQL
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// Servicios básicos
 builder.Services.AddHttpClient();
 builder.Services.AddControllers();
-
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Connection"))
-);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// IMPORTANTE: configurar el puerto dinámico para Render
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Ejecutar migraciones automáticamente al iniciar
+using (var scope = app.Services.CreateScope())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    context.Database.Migrate();
 }
-//Cors
 
+// Swagger siempre activo (Render no es "Development")
+app.UseSwagger();
+app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
+// Render ya maneja HTTPS, mejor evitar esto si da problemas
+// app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
 app.MapControllers();
-app.Run();
 
+app.Run();
