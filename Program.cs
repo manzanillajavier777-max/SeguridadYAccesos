@@ -1,5 +1,5 @@
+using Data;
 using Microsoft.EntityFrameworkCore;
-using ConsultaExterna.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// 🔹 Connection string (Render o appsettings)
+// 🔹 Connection string (appsettings o Render)
 var connectionString = builder.Configuration.GetConnectionString("Connection") 
     ?? Environment.GetEnvironmentVariable("ConnectionStrings__ConnectionSeguridadyAccesos");
 
@@ -16,8 +16,8 @@ if (string.IsNullOrEmpty(connectionString))
     throw new Exception("Connection string NO configurado");
 }
 
-// 🔹 DbContext
-builder.Services.AddDbContext<ConsultaExternaContext>(options =>
+// 🔹 DbContext (TU contexto real)
+builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // 🔹 Servicios
@@ -31,7 +31,7 @@ var app = builder.Build();
 // 🔹 Migraciones automáticas
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<ConsultaExternaContext>();
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     context.Database.Migrate();
 }
 
